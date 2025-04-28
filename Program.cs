@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq; // Required for OrderBy
+using System.Linq; 
 
 namespace OPERATING_SYSTEM_PROJECT_2
 {
     // --- Process Class for MLFQ ---
-    // Define this class within the namespace but outside the Program class
     public class MLFQProcess
     {
         public int ID { get; set; }
@@ -416,7 +415,7 @@ namespace OPERATING_SYSTEM_PROJECT_2
 
 
         //===========================================================
-        // Paste your updated fcfsAlgorithm method here
+        //  fcfsAlgorithm 
         //===========================================================
         public static void fcfsAlgorithm(int np)
         {
@@ -437,7 +436,7 @@ namespace OPERATING_SYSTEM_PROJECT_2
         }
 
         //===========================================================
-        // Paste your updated Shortesttimeremaining method here
+        // Shortesttimeremaining
         //===========================================================
         public static void ShortestTimeRemaining(int np)
         {
@@ -680,5 +679,5 @@ namespace OPERATING_SYSTEM_PROJECT_2
         }
 
 
-    } // End of Program class
-} // End of namespace
+    } 
+} /
