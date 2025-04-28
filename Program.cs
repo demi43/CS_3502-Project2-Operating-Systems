@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq; 
+using System.Linq;
 
 namespace OPERATING_SYSTEM_PROJECT_2
 {
@@ -419,22 +419,112 @@ namespace OPERATING_SYSTEM_PROJECT_2
         //===========================================================
         public static void fcfsAlgorithm(int np)
         {
-            if (np <= 0) { Console.WriteLine("Number of processes must be positive."); return; }
-            int[] processId = new int[np]; double[] arrivalTime = new double[np]; double[] burstTime = new double[np]; double[] completionTime = new double[np]; double[] waitingTime = new double[np]; double[] turnaroundTime = new double[np]; double[] responseTime = new double[np]; double[] startTime = new double[np];
-            double totalBurstTime = 0.0; double totalWaitingTime = 0.0; double totalTurnaroundTime = 0.0; double totalResponseTime = 0.0;
-            Console.WriteLine("\n--- Enter Process Details for FCFS ---");
-            for (int i = 0; i < np; i++) { processId[i] = i + 1; Console.Write($"Enter Arrival Time for Process P{processId[i]}: "); while (!double.TryParse(Console.ReadLine(), out arrivalTime[i]) || arrivalTime[i] < 0) { Console.WriteLine("Invalid input. Please enter a non-negative arrival time:"); } Console.Write($"Enter Burst Time for Process P{processId[i]}: "); while (!double.TryParse(Console.ReadLine(), out burstTime[i]) || burstTime[i] <= 0) { Console.WriteLine("Invalid input. Please enter a positive burst time:"); } totalBurstTime += burstTime[i]; }
-            var processesInfo = Enumerable.Range(0, np).Select(i => new { Index = i, Arrival = arrivalTime[i] }).OrderBy(p => p.Arrival).ToList();
-            double currentTime = 0.0; double lastCompletionTime = 0.0;
-            foreach (var procInfo in processesInfo) { int i = procInfo.Index; startTime[i] = Math.Max(currentTime, arrivalTime[i]); completionTime[i] = startTime[i] + burstTime[i]; turnaroundTime[i] = completionTime[i] - arrivalTime[i]; waitingTime[i] = turnaroundTime[i] - burstTime[i]; responseTime[i] = startTime[i] - arrivalTime[i]; if (waitingTime[i] < 0) waitingTime[i] = 0; if (responseTime[i] < 0) responseTime[i] = 0; if (turnaroundTime[i] < 0) turnaroundTime[i] = 0; currentTime = completionTime[i]; lastCompletionTime = Math.Max(lastCompletionTime, completionTime[i]); totalWaitingTime += waitingTime[i]; totalTurnaroundTime += turnaroundTime[i]; totalResponseTime += responseTime[i]; }
-            double avgWaitingTime = (np == 0) ? 0 : totalWaitingTime / np; double avgTurnaroundTime = (np == 0) ? 0 : totalTurnaroundTime / np; double avgResponseTime = (np == 0) ? 0 : totalResponseTime / np;
-            double totalTimeSpan = lastCompletionTime; double cpuUtilization = (totalTimeSpan == 0) ? 0 : (totalBurstTime / totalTimeSpan) * 100.0; double throughput = (totalTimeSpan == 0) ? 0 : np / totalTimeSpan;
-            Console.WriteLine("\n--- FCFS Results ---"); Console.WriteLine("Process\tArrival\tBurst\tStart\tCompletion\tTurnaround\tWaiting\tResponse"); Console.WriteLine("ID\tTime\tTime\tTime\tTime\t\tTime (TAT)\tTime (WT)\tTime (RT)"); Console.WriteLine("---------------------------------------------------------------------------------------------------------");
-            var outputOrder = Enumerable.Range(0, np).OrderBy(id => id); foreach (int i in outputOrder) { Console.WriteLine($"P{processId[i]}\t{arrivalTime[i]:F1}\t{burstTime[i]:F1}\t{startTime[i]:F1}\t{completionTime[i]:F1}\t\t{turnaroundTime[i]:F1}\t\t{waitingTime[i]:F1}\t\t{responseTime[i]:F1}"); }
-            Console.WriteLine("---------------------------------------------------------------------------------------------------------");
-            Console.WriteLine($"\nAverage Waiting Time (AWT)      = {avgWaitingTime:F2}"); Console.WriteLine($"Average Turnaround Time (ATT)   = {avgTurnaroundTime:F2}"); Console.WriteLine($"Average Response Time (RT)      = {avgResponseTime:F2}"); Console.WriteLine($"CPU Utilization                 = {cpuUtilization:F2}%"); Console.WriteLine($"Throughput                      = {throughput:F2} processes/time unit"); Console.WriteLine($"Total Time Elapsed (Completion) = {lastCompletionTime:F2}");
-        }
+            if (np <= 0)
+            {
+                Console.WriteLine("Number of processes must be positive.");
+                return;
+            }
 
+            // --- Data Structures (same as before) ---
+            int[] processId = new int[np];
+            double[] arrivalTime = new double[np];
+            double[] burstTime = new double[np];
+            double[] completionTime = new double[np];
+            double[] waitingTime = new double[np];
+            double[] turnaroundTime = new double[np];
+            double[] responseTime = new double[np];
+            double[] startTime = new double[np]; // Keep calculating StartTime even if not printed in table
+
+            double totalBurstTime = 0.0;
+            double totalWaitingTime = 0.0;
+            double totalTurnaroundTime = 0.0;
+            double totalResponseTime = 0.0;
+            const double TOLERANCE = 0.00001;
+
+            // --- Input (same as before) ---
+            Console.WriteLine("\n--- Enter Process Details for FCFS ---");
+            for (int i = 0; i < np; i++)
+            {
+                processId[i] = i + 1;
+                Console.Write($"Enter Arrival Time for Process P{processId[i]}: ");
+                while (!double.TryParse(Console.ReadLine(), out arrivalTime[i]) || arrivalTime[i] < 0) { Console.WriteLine("Invalid input. Please enter a non-negative arrival time:"); }
+                Console.Write($"Enter Burst Time for Process P{processId[i]}: ");
+                while (!double.TryParse(Console.ReadLine(), out burstTime[i]) || burstTime[i] <= 0) { Console.WriteLine("Invalid input. Please enter a positive burst time:"); }
+                totalBurstTime += burstTime[i];
+            }
+
+            // --- Sort Processes (with tie-breaking) ---
+            var processesInfo = Enumerable.Range(0, np)
+                                           .Select(i => new { OriginalIndex = i, Arrival = arrivalTime[i], ID = processId[i] })
+                                           .OrderBy(p => p.Arrival)
+                                           .ThenBy(p => p.ID)
+                                           .ToList();
+
+            // --- Simulation (same as before) ---
+            double currentTime = 0.0;
+            double lastCompletionTime = 0.0;
+            double firstArrivalTime = (np > 0) ? processesInfo.First().Arrival : 0.0;
+
+            foreach (var procInfo in processesInfo)
+            {
+                int i = procInfo.OriginalIndex;
+                // Calculate all metrics, including StartTime
+                startTime[i] = Math.Max(currentTime, arrivalTime[i]);
+                completionTime[i] = startTime[i] + burstTime[i];
+                turnaroundTime[i] = completionTime[i] - arrivalTime[i];
+                waitingTime[i] = startTime[i] - arrivalTime[i];
+                responseTime[i] = startTime[i] - arrivalTime[i];
+
+                if (waitingTime[i] < TOLERANCE) waitingTime[i] = 0;
+                if (responseTime[i] < TOLERANCE) responseTime[i] = 0;
+                if (turnaroundTime[i] < TOLERANCE) turnaroundTime[i] = 0;
+
+                currentTime = completionTime[i];
+                lastCompletionTime = Math.Max(lastCompletionTime, completionTime[i]);
+                totalWaitingTime += waitingTime[i];
+                totalTurnaroundTime += turnaroundTime[i];
+                totalResponseTime += responseTime[i];
+            }
+
+            // --- Calculate Final Metrics (same as before) ---
+            double avgWaitingTime = (np == 0) ? 0 : totalWaitingTime / np;
+            double avgTurnaroundTime = (np == 0) ? 0 : totalTurnaroundTime / np;
+            double avgResponseTime = (np == 0) ? 0 : totalResponseTime / np;
+            double activeTimeSpan = (np == 0) ? 0 : Math.Max(0, lastCompletionTime - firstArrivalTime);
+            double calculationTimeSpan = (activeTimeSpan < TOLERANCE) ? lastCompletionTime : activeTimeSpan;
+            double cpuUtilization = (calculationTimeSpan < TOLERANCE) ? 0 : (totalBurstTime / calculationTimeSpan) * 100.0;
+            double throughput = (lastCompletionTime < TOLERANCE) ? 0 : np / lastCompletionTime;
+
+
+            // --- Display Results (Matching SRTF Format) ---
+            // *** MODIFIED OUTPUT FORMATTING HERE ***
+            Console.WriteLine("\n--- FCFS Results ---");
+            // Header lines matching SRTF example
+            Console.WriteLine("Process\tArrival\tBurst\tCompletion\tTurnaround\tWaiting\tResponse");
+            Console.WriteLine("ID\tTime\tTime\tTime\t\tTime (TAT)\tTime (WT)\tTime (RT)"); // Note: No "Start Time" column
+                                                                                           // Separator Line matching SRTF example length
+            Console.WriteLine("-----------------------------------------------------------------------------------------");
+
+            // Output results ordered by original process ID for consistency
+            var outputOrder = Enumerable.Range(0, np).OrderBy(idx => processId[idx]);
+            foreach (int i in outputOrder)
+            {
+                // Print data using Tabs, F1 format specifier, and matching double tabs
+                // Note: startTime[i] is NOT printed here to match the SRTF column structure
+                Console.WriteLine($"P{processId[i]}\t{arrivalTime[i]:F1}\t{burstTime[i]:F1}\t{completionTime[i]:F1}\t\t{turnaroundTime[i]:F1}\t\t{waitingTime[i]:F1}\t\t{responseTime[i]:F1}");
+            }
+
+            // Separator Line matching SRTF example length
+            Console.WriteLine("-----------------------------------------------------------------------------------------");
+
+            // Print summary metrics (same as before)
+            Console.WriteLine($"\nAverage Waiting Time (AWT)      = {avgWaitingTime:F2}"); // Keep F2 for averages
+            Console.WriteLine($"Average Turnaround Time (ATT)   = {avgTurnaroundTime:F2}");
+            Console.WriteLine($"Average Response Time (RT)      = {avgResponseTime:F2}");
+            Console.WriteLine($"CPU Utilization (over active)   = {cpuUtilization:F2}%  (Span: {calculationTimeSpan:F2})");
+            Console.WriteLine($"Throughput                      = {throughput:F2} processes/time unit (Total time: {lastCompletionTime:F2})");
+            Console.WriteLine($"Total Time Elapsed (Completion) = {lastCompletionTime:F2}");
+        }
         //===========================================================
         // Shortesttimeremaining
         //===========================================================
@@ -679,5 +769,5 @@ namespace OPERATING_SYSTEM_PROJECT_2
         }
 
 
-    } 
-} /
+    }
+} 
